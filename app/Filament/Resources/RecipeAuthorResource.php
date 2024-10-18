@@ -41,7 +41,7 @@ class RecipeAuthorResource extends Resource
                 Tables\Columns\TextColumn::make('name')
                     ->searchable(),
                 Tables\Columns\ImageColumn::make('photo')
-                    ->searchable(),
+                    ->circular(),
                 Tables\Columns\TextColumn::make('deleted_at')
                     ->dateTime()
                     ->sortable()

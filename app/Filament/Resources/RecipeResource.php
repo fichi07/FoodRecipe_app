@@ -10,9 +10,13 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use App\Filament\Resources\RecipeResource\RelationManagers\TutorialsRelationManager;
+use Filament\Tables\Columns\ImageColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Illuminate\Support\Str;
 use Filament\Forms\Set;
-use Illuminate\Database\Eloquent\Builder;
+use App\Models\Ingredient;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class RecipeResource extends Resource
@@ -26,15 +30,15 @@ class RecipeResource extends Resource
         return $form
             ->schema([
                 Forms\Components\TextInput::make('name')
-                    ->required()
-                    ->helperText('Input nama kategori')
                     ->afterStateUpdated(fn(Set $set, ?String $state) => $set('slug', Str::slug($state)))
-                    ->live(debounce: 1000)
+                    ->live()
+                    ->required()
                     ->maxLength(255),
                 Forms\Components\TextInput::make('slug')
                     ->disabled()
                     ->required(),
                 Forms\Components\FileUpload::make('thumbnail')
+                    ->required()
                     ->image()
                     ->openable()
                     ->required()->directory('thumbnail')
@@ -42,18 +46,42 @@ class RecipeResource extends Resource
                 Forms\Components\Textarea::make('about')
                     ->required()
                     ->columnSpanFull(),
-                Forms\Components\Select::make('category_id')
-                    ->relationship('categorie', 'name')
-                    ->required(),
+
+                Forms\Components\Repeater::make('recipe_ingredients')
+                    ->relationship()
+                    ->schema([
+                        Forms\Components\Select::make('ingredient_id')
+                            ->relationship('ingredient', 'name')
+                            ->required(),
+                    ]),
+                Forms\Components\Repeater::make('recipe_photos')
+                    ->relationship('recipe_photos')
+                    ->schema([
+                        Forms\Components\FileUpload::make('photo')
+                            ->image()
+                            ->required(),
+                    ]),
                 Forms\Components\Select::make('recipe_author_id')
                     ->relationship('recipe_author', 'name')
-                    ->required(),
+                    ->searchable()
+                    ->required()
+                    ->preload(),
+
+                Forms\Components\Select::make('category_id')
+                    ->relationship('category', 'name')
+                    ->searchable()
+                    ->required()
+                    ->preload(),
+
                 Forms\Components\TextInput::make('url_video')
                     ->required()
                     ->maxLength(255),
-                Forms\Components\TextInput::make('url_file')
-                    ->required()
-                    ->maxLength(255),
+
+                Forms\Components\FileUpload::make('url_file')
+                    ->downloadable()
+                    ->uploadingMessage('Uploading recipes.....')
+                    ->acceptedFileTypes(['application/pdf'])
+                    ->required(),
             ]);
     }
 
@@ -63,35 +91,30 @@ class RecipeResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('name')
                     ->searchable(),
-                Tables\Columns\TextColumn::make('slug')
+                Tables\Columns\TextColumn::make('category.name')
                     ->searchable(),
-                Tables\Columns\ImageColumn::make('thumbnail')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('categorie.name')
-                    ->numeric()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('recipe_author.name')
-                    ->numeric()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('url_video')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('url_file')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('deleted_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                ImageColumn::make('author.photo')
+                    ->circular(),
+                Tables\Columns\ImageColumn::make('thumbnail'),
+
             ])
             ->filters([
-                //
+                SelectFilter::make('recipe_author_id')
+                    ->label('Author')
+                    ->relationship('recipe_author', 'name'),
+                SelectFilter::make('category_id')
+                    ->label('Category')
+                    ->relationship('category', 'name'),
+                SelectFilter::make('ingredient_id')
+                    ->label('Ingredient')
+                    ->options(Ingredient::pluck('name', 'id'))
+                    ->query(function (Builder $query, array $data) {
+                        if ($data['value']) {
+                            $query->whereHas('recipe_ingredients', function ($query) use ($data) {
+                                $query->where('ingredient_id', $data['value']);
+                            });
+                        }
+                    }) //
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
@@ -104,10 +127,19 @@ class RecipeResource extends Resource
             ]);
     }
 
+    public static function getRelations(): array
+    {
+        return [
+            TutorialsRelationManager::class,
+        ];
+    }
+
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ManageRecipes::route('/'),
+            'index' => Pages\ListRecipes::route('/'),
+            'create' => Pages\CreateRecipe::route('/create'),
+            'edit' => Pages\EditRecipe::route('/{record}/edit'),
         ];
     }
 }

@@ -21,6 +21,8 @@ class CategoryResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-m-view-columns';
 
+
+
     public static function form(Form $form): Form
     {
         return $form
@@ -28,7 +30,7 @@ class CategoryResource extends Resource
                 Forms\Components\TextInput::make('name')
                     ->helperText('Input nama Resep')
                     ->afterStateUpdated(fn(Set $set, ?String $state) => $set('slug', Str::slug($state)))
-                    ->live(debounce: 1000)
+                    ->live()
                     ->required()
                     ->maxLength(255),
                 Forms\Components\TextInput::make('slug')

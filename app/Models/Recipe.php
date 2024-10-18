@@ -36,10 +36,11 @@ class Recipe extends Model
         $this->attributes['name'] = $value;
         $this->attributes['slug'] = Str::slug($value);
     }
-    public function categorie(): BelongsTo
+    public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class, 'category_id');
     }
+
 
     public function recipe_author(): BelongsTo
     {
@@ -53,7 +54,7 @@ class Recipe extends Model
     {
         return $this->hasMany(RecipeTutorial::class);
     }
-    public function recipe_ingridients(): HasMany
+    public function recipe_ingredients(): HasMany
     {
         return $this->hasMany(RecipeIngredient::class);
     }
