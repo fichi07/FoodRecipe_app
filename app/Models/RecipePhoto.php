@@ -15,7 +15,7 @@ class RecipePhoto extends Model
         'photo',
         'recipe_id'
     ];
-    public function recipes(): BelongsTo
+    public function recipe(): BelongsTo
     {
         return $this->belongsTo(Recipe::class);
     }

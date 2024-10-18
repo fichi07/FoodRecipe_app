@@ -24,7 +24,7 @@ class Recipe extends Model
         'slug',
         'thumbnail',
         'about',
-        'categorie_id',
+        'category_id',
         'recipe_author_id',
         'url_video',
         'url_file'
